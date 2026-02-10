@@ -1,27 +1,44 @@
 import socket
 
-def enviar_orden():
-    # Tarea 2: Sockets TCP/IP
-    # Usamos 127.0.0.1 para probar localmente en tu laboratorio
-    ip = "127.0.0.1" 
-    puerto = 6500
+# TAREA 3: MIDDLEWARE Y DESCUBRIMIENTO
+# En los labs de Red Hat, los nombres de dominio suelen estar preconfigurados
+nodos_distribuidos = {
+    "1": ("servera", 5000),
+    "2": ("serverb", 5000)
+}
 
+def conectar_nodo(host, puerto, orden):
+    try:
+        c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        c.settimeout(3) # Si el servidor no responde en 3 seg, error
+        c.connect((host, puerto))
+        c.send(orden.encode())
+        respuesta = c.recv(4096).decode()
+        c.close()
+        return respuesta
+    except Exception as e:
+        return f"ERROR: No se pudo conectar a {host}. ¿Está encendido el script?"
+
+def menu():
     while True:
-        print("\n--- PANEL DE CONTROL REMOTO ---")
-        print("Escribe: 'listar', 'monitorear', 'detener [PID]' o 'salir'")
-        cmd = input("Orden: ")
-        
-        if cmd == "salir": break
+        print("\n--- SISTEMA DE GESTIÓN DISTRIBUIDA (RHEL) ---")
+        print("Nodos disponibles:")
+        for k, v in nodos_distribuidos.items():
+            print(f" [{k}] {v[0]}")
+        print(" [Q] Salir")
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.connect((ip, puerto))
-            sock.send(cmd.encode('utf-8'))
-            print(f"\nRespuesta:\n{sock.recv(4096).decode('utf-8')}")
-        except:
-            print("Error: No se pudo conectar al servidor.")
-        finally:
-            sock.close()
+        seleccion = input("\nSeleccione un NODO: ")
+        if seleccion.lower() == 'q': break
+        
+        if seleccion in nodos_distribuidos:
+            host_destino = nodos_distribuidos[seleccion][0]
+            print(f"\nConectado a {host_destino}. Comandos: listar, monitorear, detener <PID>")
+            comando = input("Comando >> ")
+            
+            print(f"\n--- Respuesta de {host_destino} ---")
+            print(conectar_nodo(host_destino, 5000, comando))
+        else:
+            print("Selección inválida.")
 
 if __name__ == "__main__":
-    enviar_orden()
+    menu()
